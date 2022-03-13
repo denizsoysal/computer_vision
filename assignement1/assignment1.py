@@ -55,14 +55,17 @@ def main(input_video_file: str, output_video_file: str) -> None:
                          interpolation = cv2.INTER_CUBIC)
         if ret:
             # font,colour, ... to be used for video text annotation
-            font = cv2.FONT_HERSHEY_SIMPLEX
+            font = cv2.FONT_HERSHEY_COMPLEX_SMALL
             font_size = (output_frame_width * output_frame_height) / (1000 * 1000)
             color = (0, 255, 255)
-            thickness = 2
+            thickness = 1
             # define q as the exit button
             if cv2.waitKey(28) & 0xFF == ord('q'):
                 break
             if between(cap, 0, 2000):
+                """
+                convert frame to gray 
+                """
                 #convert frame to gray scale
                 output = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 #to be able to write the video, we have to convert from gray to RGB
@@ -71,27 +74,82 @@ def main(input_video_file: str, output_video_file: str) -> None:
                 # Use cv2.putText(frame, Text, org, font, color, thickness) method for inserting text on video
                 cv2.putText(output, 'Gray scale', (50, 50),font, 1, color, thickness, cv2.LINE_4)
             if between(cap, 2000, 4000):  
+                """
+                frame does not change
+                """
                 #frame does not change
                 output = frame
                 cv2.putText(output, 'RGB scale', (50, 50),font, 1, color, thickness, cv2.LINE_4)
             if between(cap,4000,6000):
+                """
+                apply gaussian blur
+                """
                 #apply GaussianBlur(input, kernel_size, sigma_x, sigma_y)
                 output = cv2.GaussianBlur(frame, (5,5), 1, 1, cv2.BORDER_DEFAULT)
                 cv2.putText(output, 'Gaussian, kernel = (5,5)', (50, 50),font, 1, color, thickness, cv2.LINE_4)
             if between(cap,6000,8000):
+                """
+                apply higher gaussian blur 
+                """
                 #apply GaussianBlur(input, kernel_size, sigma_x, sigma_y)
                 output = cv2.GaussianBlur(frame, (13,13), 1, 1, cv2.BORDER_DEFAULT)
-                cv2.putText(output, 'Gaussian, kernel = (13,13) ; image is more smoothed', (50, 50),font, 1
-                , color, thickness, cv2.LINE_4)
+                cv2.putText(output, 'Gaussian, kernel = (13,13)',(50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(output, 'image is more smoothed', (50,70),font, 1, color, thickness, cv2.LINE_4)
 
             if between(cap,8000,10000):
+                """
+                apply bilateral filter 
+                """
                 #apply cbilateralFilter(input,output,kernel_size,sigmaColor,sigmaSpace,borderType=BORDER_DEFAULT)
                 output = cv2.bilateralFilter(frame,9,10,10)
                 cv2.putText(output, 'bilateral filtering, sigma=10', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(output, 'edges are preserved, thanks to', (50,70),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(output, 'the filter as a function of', (50,90),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(output, 'pixel difference', (50,110),font, 1, color, thickness, cv2.LINE_4)
             if between(cap,10000,12000):
+                """
+                apply stronger bilateral filter 
+                """
                 #apply cbilateralFilter(input,output,kernel_size,sigmaColor,sigmaSpace,borderType=BORDER_DEFAULT)
-                output = cv2.bilateralFilter(frame,9,100,100)
-                cv2.putText(output, 'bilateral filtering,sigma=100', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                output = cv2.bilateralFilter(frame,9,1000000,1000000)
+                cv2.putText(output, 'bilateral filtering,sigma=1000000', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(output, 'becomes similar to Gaussian', (50,70),font, 1, color, thickness, cv2.LINE_4)
+
+            if between(cap,12000,14000):
+                """
+                threshold on blue color
+                """
+                # conversion of BGR to HSV
+                hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+                #blue color range
+                lower_blue = np.array([110,50,50])
+                upper_blue = np.array([130,255,255])
+                # Here we are defining range of bluecolor in HSV
+                output = cv2.inRange(hsv, lower_blue, upper_blue)
+                #convert to BGR to save as video
+                output = cv2.cvtColor(output, cv2.COLOR_GRAY2BGR)
+                cv2.putText(output, 'blue thresholding', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,14000,16000):
+                """
+                here, we also threshold on blue color
+                but we apply dilation to have a better output
+                see :  https://pyimagesearch.com/2021/04/28/opencv-morphological-operations/#:~:text=Morphological%20operations%20are%20simple%20transformations,as%20well%20as%20decrease%20them.
+                OR : https://opencv24-python-tutorials.readthedocs.io/en/latest/py_tutorials/py_imgproc/py_morphological_ops/py_morphological_ops.html
+                """
+                # conversion of BGR to HSV
+                hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+                #blue color range
+                lower_blue = np.array([110,50,50])
+                upper_blue = np.array([130,255,255])
+                # Here we are defining range of bluecolor in HSV
+                output = cv2.inRange(hsv, lower_blue, upper_blue)
+                #do dilation
+                output = cv2.dilate(output.copy(), (8,8), iterations=20)
+                #convert to BGR to save as video
+                output = cv2.cvtColor(output, cv2.COLOR_GRAY2BGR)
+                cv2.putText(output, 'blue thresholding with dilation', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+ 
+               
             # write frame that you processed to output
             out.write(output)
 
@@ -113,7 +171,7 @@ def main(input_video_file: str, output_video_file: str) -> None:
     # Closes all the frames
     cv2.destroyAllWindows()
 
-main("input.mp4", "output.mp4")
+main("input2.mp4", "output.mp4")
 
 # if __name__ == '__main__':
 #     parser = argparse.ArgumentParser(description='OpenCV video processing')
