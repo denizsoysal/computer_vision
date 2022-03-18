@@ -15,10 +15,11 @@ import sys
 import numpy as np
 
 
+
 """
 some definitions of variables :
 """
-#we define the below frame width and height of the output frame
+#we define the below frame width and height of the frame frame
 #they are smaller than the input_frame_width and height 
 #the idea is to downsample to keep the file size small
 output_frame_width = 540
@@ -73,26 +74,26 @@ def toGray(input):
     convert frame to gray 
     """
     #convert frame to gray scale
-    output = cv2.cvtColor(input, cv2.COLOR_BGR2GRAY)
+    frame = cv2.cvtColor(input, cv2.COLOR_BGR2GRAY)
     #to be able to write the video, we have to convert from gray to RGB
     #it will stay in gray, but the function videoWrite needs to have an RGB input
-    output = cv2.cvtColor(output, cv2.COLOR_GRAY2BGR)
-    return output
+    frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+    return frame
 
 def noChange(input):
     """
     video stays in RGB
     """
-    output = input
-    return output
+    frame = input
+    return frame
 
 def gaussianBlur(input, kernel = 5):
     """
     apply gaussian blur
     """
     #apply GaussianBlur(input, kernel_size, sigma_x, sigma_y)
-    output = cv2.GaussianBlur(input, (kernel,kernel), 1, 1, cv2.BORDER_DEFAULT)
-    return output
+    frame = cv2.GaussianBlur(input, (kernel,kernel), 1, 1, cv2.BORDER_DEFAULT)
+    return frame
 
 
 def bilateralFiltering(input,kernel=9,sigma=10):
@@ -100,10 +101,10 @@ def bilateralFiltering(input,kernel=9,sigma=10):
     apply bilateral Filtering
     """
     #apply cbilateralFilter(input,output,kernel_size,sigmaColor,sigmaSpace,borderType=BORDER_DEFAULT)
-    output = cv2.bilateralFilter(input,kernel,sigma,sigma)
-    return output
+    frame = cv2.bilateralFilter(input,kernel,sigma,sigma)
+    return frame
 
-def thresholdingColorHSV(input,lower_threshold = np.array([110,50,50]), upper_threshold = np.array([130,255,255])):
+def thresholdingColorHSV(input,lower_threshold = np.array([50,150,0]), upper_threshold = np.array([100,255,255])):
     """
     threshold on color, in HSV space
     
@@ -112,12 +113,12 @@ def thresholdingColorHSV(input,lower_threshold = np.array([110,50,50]), upper_th
     # conversion of BGR to HSV
     hsv = cv2.cvtColor(input, cv2.COLOR_BGR2HSV)
     # Here we are defining range of color in HSV
-    output = cv2.inRange(hsv, lower_threshold, upper_threshold)
+    frame = cv2.inRange(hsv, lower_threshold, upper_threshold)
     #convert to BGR to save as video
-    output = cv2.cvtColor(output, cv2.COLOR_GRAY2BGR)
-    return output
+    frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+    return frame
 
-def thresholdingColorHSV_Dilation(input,lower_threshold = np.array([110,50,50]), upper_threshold = np.array([130,255,255])):
+def thresholdingColorHSV_Dilation(input,lower_threshold = np.array([50,150,0]), upper_threshold = np.array([100,255,255])):
     """
     threshold on color, in HSV space with dilation
     we apply dilation to have a better output
@@ -127,19 +128,136 @@ def thresholdingColorHSV_Dilation(input,lower_threshold = np.array([110,50,50]),
     # conversion of BGR to HSV
     hsv = cv2.cvtColor(input, cv2.COLOR_BGR2HSV)
     # Here we are defining range of bluecolor in HSV
-    output = cv2.inRange(hsv, lower_threshold, upper_threshold)
+    frame = cv2.inRange(hsv, lower_threshold, upper_threshold)
     #do dilation
-    output = cv2.dilate(output.copy(), (8,8), iterations=20)
+    frame = cv2.dilate(frame.copy(), (8,8), iterations=20)
     #convert to BGR to save as video
-    output = cv2.cvtColor(output, cv2.COLOR_GRAY2BGR)
-    return output
-   
+    frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+    return frame
+
+
+"""
+###################################################################
+######## Definition of Functions : Object Detection ###############
+###################################################################
+
+"""
+
+
+def sobelDetector(input, ksize =5, axis='x'):
+    # conversion of BGR to GRAY
+    gray = cv2.cvtColor(input, cv2.COLOR_BGR2GRAY)
+    #smooth to reduce noise
+    smoothed = gaussianBlur(gray,kernel=45)
+    #sobel edge detection on the x axis 
+    sobel_x = cv2.Sobel(src=smoothed, ddepth=cv2.CV_64F, dx=1, dy=0, ksize=ksize)
+    #sobel edge detection on the y axis 
+    sobel_y = cv2.Sobel(src=smoothed, ddepth=cv2.CV_64F, dx=0, dy=1, ksize=ksize)
+    #sobel edge detection on the x AND y axis
+    sobel_xy = cv2.Sobel(src=smoothed, ddepth=cv2.CV_64F, dx=1, dy=1, ksize=ksize)
+    
+    abs_sobel_x = cv2.convertScaleAbs(sobel_x)
+    abs_sobel_y = cv2.convertScaleAbs(sobel_y)
+
+    grad = cv2.addWeighted(abs_sobel_x, 0.5, abs_sobel_y, 0.5, 0)
+
+    
+    
+    if axis =='x':
+        frame = sobel_x
+    elif axis == 'y':
+        frame = sobel_y
+    elif axis == 'xy':
+        frame = grad
+    else:
+        frame = input     
+    
+    #sobel output is in range 0...1 byt videoWrite wants value in range 0...255
+    frame = (255*frame).clip(0,255).astype(np.uint8)
+    #convert to BGR to save as video
+    frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+    
+    return frame
+    
+def houghTransformCircles(input,param1,param2,minRadius,maxRadius):
+    frame = input
+    # conversion of BGR to GRAY
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    #smooth to reduce noise
+    smoothed = gaussianBlur(gray)
+    rows = smoothed.shape[0]
+    #param 1 : sensitivity (strenght of edges)
+    #param 2 :how many edge needed to define a circcle
+    circles = cv2.HoughCircles(smoothed, cv2.HOUGH_GRADIENT, 1, rows / 8,
+                               param1=param1, param2=param2,
+                               minRadius=minRadius, maxRadius=maxRadius)
+    if circles is not None:
+        circles = np.uint16(np.around(circles))
+        for i in circles[0, :]:
+            center = (i[0], i[1])
+            # circle center
+            cv2.circle(frame, center, 1, (0, 100, 100), 3)
+            # circle outline
+            radius = i[2]
+            cv2.circle(frame, center, radius, (255, 0, 255), 3)
+
+    return frame
+    
+def trackObjectByColor(input,lower_threshold = np.array([5, 75, 25]), upper_threshold = np.array([25, 255, 255])):
+    """
+    track an object based on its color
+    based on https://pyimagesearch.com/2015/09/21/opencv-track-object-movement/
+    and https://www.analyticsvidhya.com/blog/2021/08/getting-started-with-object-tracking-using-opencv/
+    """
+    frame = input
+    # conversion of BGR to HSV
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    #create color mask 
+    mask = cv2.inRange(hsv,lower_threshold,upper_threshold)
+    #detect contours of the object 
+    _,contours,_= cv2.findContours(mask,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+    #take the largest value (if there exist other smaller object with orange value, they are ignored)
+    max_contour = contours[0]
+    for contour in contours:
+            if cv2.contourArea(contour)>cv2.contourArea(max_contour):
+                  max_contour=contour
+    contour=max_contour
+    approx=cv2.approxPolyDP(contour, 0.01*cv2.arcLength(contour,True),True)
+    #draw bounding rectangle
+    x,y,w,h=cv2.boundingRect(approx)
+    cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),4)
+    
+    return frame
+
+
+
+def templateMatch(input,temp="gohan.png"):
+    frame = input
+    gray = cv2.cvtColor(input, cv2.COLOR_BGR2GRAY)
+    #read template from (png file)
+    template = cv2.imread(temp,0)
+    #resize the template
+    template = cv2.resize(template, (120, 70), fx = 0, fy = 0,
+                     interpolation = cv2.INTER_CUBIC)
+    w,h = template.shape[::-1]
+    
+    res = cv2.matchTemplate(gray,template,cv2.TM_SQDIFF_NORMED)
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+    
+    top_left = max_loc
+    bottom_right = (top_left[0] + w, top_left[1] + h)
+    cv2.rectangle(frame,top_left, bottom_right, 255, 2)
+
+    
+
+
+    return frame
+
 
 """
 ###################################################################################
 ######## Applied the previously defined functions at different time steps #########
 ###################################################################################
-
 """
     
 def main(input_video_file: str, output_video_file: str) -> None:
@@ -156,45 +274,90 @@ def main(input_video_file: str, output_video_file: str) -> None:
             # define q as the exit button
             if cv2.waitKey(28) & 0xFF == ord('q'):
                 break
-            if between(cap, 0, 2000):
-                output = toGray(frame)
+            if between(cap, 0, 1000):
+                frame = toGray(frame)
                 # Use cv2.putText(frame, Text, org, font, color, thickness) method for inserting text on video
-                cv2.putText(output, 'Gray scale', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            if between(cap, 2000, 4000):  
-                output = noChange(frame)
-                cv2.putText(output, 'RGB scale', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'Gray scale', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap, 1000, 2000):
+                frame = noChange(frame)
+                cv2.putText(frame, 'RGB scale', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap, 2000, 3000):
+                frame = toGray(frame)
+                cv2.putText(frame, 'Gray scale', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap, 3000, 4000):
+                frame = noChange(frame)
+                cv2.putText(frame, 'RGB scale', (50, 50),font, 1, color, thickness, cv2.LINE_4)
             if between(cap,4000,6000):
-                output = gaussianBlur(frame)
-                cv2.putText(output, 'Gaussian, kernel = (5,5)', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                frame = gaussianBlur(frame)
+                cv2.putText(frame, 'Gaussian, kernel = (5,5)', (50, 50),font, 1, color, thickness, cv2.LINE_4)
             if between(cap,6000,8000):
-                output = gaussianBlur(frame,kernel=13)
-                cv2.putText(output, 'Gaussian, kernel = (13,13)', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(output, 'image is more smoothed', (50,70),font, 1, color, thickness, cv2.LINE_4)
+                frame = gaussianBlur(frame,kernel=13)
+                cv2.putText(frame, 'Gaussian, kernel = (13,13)', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'image is more smoothed', (50,70),font, 1, color, thickness, cv2.LINE_4)
             if between(cap,8000,11000):
-                output = bilateralFiltering(frame)
-                cv2.putText(output, 'bilateral filtering, sigma=10', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(output, 'edges are preserved, thanks to', (50,70),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(output, 'the filter as a function of', (50,90),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(output, 'pixel difference', (50,110),font, 1, color, thickness, cv2.LINE_4)
-            if between(cap,11000,14000):
-                output = bilateralFiltering(frame,9,1000000)
-                cv2.putText(output, 'bilateral filtering,sigma=1000000', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(output, 'becomes similar to Gaussian', (50,70),font, 1, color, thickness, cv2.LINE_4)
-
-            if between(cap,14000,16000):
-                output = thresholdingColorHSV(frame)
-                cv2.putText(output, 'blue thresholding in HSV space', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            if between(cap,16000,18000):
-                output = thresholdingColorHSV_Dilation(frame)
-                cv2.putText(output, 'blue thresholding in HSV with dilation', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                frame = bilateralFiltering(frame)
+                cv2.putText(frame, 'bilateral filtering, sigma=10', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'edges are preserved, thanks to', (50,70),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'the filter as a function of', (50,90),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'pixel difference', (50,110),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,11000,13000):
+                frame = bilateralFiltering(frame,9,1000000)
+                cv2.putText(frame, 'bilateral filtering,sigma=1000000', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'becomes similar to Gaussian', (50,70),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap, 13000, 15000):
+                frame = noChange(frame)
+            if between(cap,15000,18000):
+                frame = thresholdingColorHSV(frame)
+                cv2.putText(frame, 'blue thresholding in HSV space', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,18000,21000):
+                frame = thresholdingColorHSV_Dilation(frame)
+                cv2.putText(frame, 'blue thresholding in HSV', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'with dilation', (50,70),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap, 21000, 23000):
+                frame = noChange(frame)
+            if between(cap,23000,25000):
+                frame = sobelDetector(frame, ksize =15, axis='x')
+                cv2.putText(frame, 'Sobel - Vertical edges', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,25000,27000):
+                frame = sobelDetector(frame, ksize =15, axis='y')
+                cv2.putText(frame, 'Sobel - Horizontal edges', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,27000,29000):
+                frame = sobelDetector(frame, ksize =3, axis='x')
+                cv2.putText(frame, 'Sobel - Horizontal edges', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'Smaller Kernel', (50,70),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap, 29000, 31000):
+                frame = noChange(frame)
+            if between(cap,31000,36000):
+                #houghTransformCircles(input,param1,param2,minRadius,maxRadius)
+                houghTransformCircles(frame,180,30,1,0)
+                cv2.putText(frame, 'Hough Transform, param1=180', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'param2 = 30', (50,70),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'minRadius = 1, maxRadius = 0', (50,90),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,36000,38000):
+                #houghTransformCircles(input,param1,param2,minRadius,maxRadius)
+                houghTransformCircles(frame,180,20,1,0)
+                cv2.putText(frame, 'Hough Transform, param1=180', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'param2 = 20', (50,70),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'minRadius = 1, maxRadius = 0', (50,90),font, 1, color, thickness, cv2.LINE_4)  
+            if between(cap,38000,40000):
+                #houghTransformCircles(input,param1,param2,minRadius,maxRadius)
+                houghTransformCircles(frame,100,15,1,10)
+                cv2.putText(frame, 'Hough Transform, param1=100', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'param2 = 10', (50,70),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'minRadius = 1, maxRadius = 15', (50,90),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,40000,47000):
+                trackObjectByColor(frame)
+                cv2.putText(frame, 'Track orange Object', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,47000,55000):
+                templateMatch(frame)
+                cv2.putText(frame, 'Match template', (50, 50),font, 1, color, thickness, cv2.LINE_4)
                 
-               
+                
             # write frame that you processed to output
-            out.write(output)
+            out.write(frame)
 
             # (optional) display the resulting frame
             cv2.imshow('Frame', frame)
-            cv2.imshow('Output', output)
 
             # Press Q on keyboard to  exit
             if cv2.waitKey(25) & 0xFF == ord('q'):
@@ -210,7 +373,7 @@ def main(input_video_file: str, output_video_file: str) -> None:
     # Closes all the frames
     cv2.destroyAllWindows()
 
-main("input2.mp4", "output.mp4")
+main("input5.mp4", "output.mp4")
 
 # if __name__ == '__main__':
 #     parser = argparse.ArgumentParser(description='OpenCV video processing')
