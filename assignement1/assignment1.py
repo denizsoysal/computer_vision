@@ -55,6 +55,11 @@ def OpenVideoAndWriteOutput(input_video_file,output_video_file):
     #writing the output video file
     #if we want to write only gray scale part of the video 
     #the argument isColor = False specify that the output is in Gray scale and not RGB
+    
+    #if you do not want to have the output dimensions as the same as input dimensions, comment the 2 lines below
+    # output_frame_width = input_frame_width
+    # output_frame_height = input_frame_height
+    
     out = cv2.VideoWriter(output_video_file, fourcc, input_fps, (output_frame_width, output_frame_height))
     print("fps is", input_fps)
     print("frame size is :", input_frame_width, input_frame_height)
@@ -231,21 +236,33 @@ def trackObjectByColor(input,lower_threshold = np.array([5, 75, 25]), upper_thre
 
 
 
-def templateMatch(input,temp="gohan.png"):
+def templateMatch(input,temp="template/gohan.png"):
     frame = input
     gray = cv2.cvtColor(input, cv2.COLOR_BGR2GRAY)
     #read template from (png file)
     template = cv2.imread(temp,0)
-    #resize the template
-    template = cv2.resize(template, (120, 70), fx = 0, fy = 0,
-                     interpolation = cv2.INTER_CUBIC)
+    
+    #resize the template (conserve the widht height ratio)
+    resizing_factor = 0.20    #resizing factor
+    width = int(template.shape[::-1][0] * resizing_factor)
+    height = int(template.shape[::-1][1] * resizing_factor)
+    dim = (width, height)
+    template = cv2.resize(template, dim, interpolation = cv2.INTER_AREA)
+    
+    #width and height of the resized template :
     w,h = template.shape[::-1]
     
+    #perform matching with SQDIFF_NORMED method
     res = cv2.matchTemplate(gray,template,cv2.TM_SQDIFF_NORMED)
+    
+    #get min/max values and location of the squared difference between template and image
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
     
-    top_left = max_loc
+    #we are intereseted in the location where the template match the image : minimum squared difference --> min_loc
+    top_left = min_loc
+    #from the min_loc, we add the size of the template in order to have the other corner of the rectangle
     bottom_right = (top_left[0] + w, top_left[1] + h)
+    #we draw the rectange from top_left to bottom_right
     cv2.rectangle(frame,top_left, bottom_right, 255, 2)
 
     
@@ -266,9 +283,10 @@ def main(input_video_file: str, output_video_file: str) -> None:
     while cap.isOpened():
         #capture frame by frame
         ret, frame = cap.read()
+        #uncomment the following lines if you have downsampled the image in the beginning : 
         #before working on the frame, we resize it to the same size as the output
         frame = cv2.resize(frame, (output_frame_width, output_frame_height), fx = 0, fy = 0,
-                         interpolation = cv2.INTER_CUBIC)
+                          interpolation = cv2.INTER_CUBIC)
         if ret:
 
             # define q as the exit button
@@ -333,24 +351,24 @@ def main(input_video_file: str, output_video_file: str) -> None:
                 cv2.putText(frame, 'Hough Transform, param1=180', (50, 50),font, 1, color, thickness, cv2.LINE_4)
                 cv2.putText(frame, 'param2 = 30', (50,70),font, 1, color, thickness, cv2.LINE_4)
                 cv2.putText(frame, 'minRadius = 1, maxRadius = 0', (50,90),font, 1, color, thickness, cv2.LINE_4)
-            if between(cap,36000,38000):
+            if between(cap,36000,40000):
                 #houghTransformCircles(input,param1,param2,minRadius,maxRadius)
                 houghTransformCircles(frame,180,20,1,0)
                 cv2.putText(frame, 'Hough Transform, param1=180', (50, 50),font, 1, color, thickness, cv2.LINE_4)
                 cv2.putText(frame, 'param2 = 20', (50,70),font, 1, color, thickness, cv2.LINE_4)
                 cv2.putText(frame, 'minRadius = 1, maxRadius = 0', (50,90),font, 1, color, thickness, cv2.LINE_4)  
-            if between(cap,38000,40000):
+            if between(cap,40000,42000):
                 #houghTransformCircles(input,param1,param2,minRadius,maxRadius)
                 houghTransformCircles(frame,100,15,1,10)
                 cv2.putText(frame, 'Hough Transform, param1=100', (50, 50),font, 1, color, thickness, cv2.LINE_4)
                 cv2.putText(frame, 'param2 = 10', (50,70),font, 1, color, thickness, cv2.LINE_4)
                 cv2.putText(frame, 'minRadius = 1, maxRadius = 15', (50,90),font, 1, color, thickness, cv2.LINE_4)
-            if between(cap,40000,47000):
-                trackObjectByColor(frame)
-                cv2.putText(frame, 'Track orange Object', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            if between(cap,47000,55000):
+            if between(cap,42000,47000):
                 templateMatch(frame)
                 cv2.putText(frame, 'Match template', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,47000,60000):
+                trackObjectByColor(frame)
+                cv2.putText(frame, 'Track orange Object', (50, 50),font, 1, color, thickness, cv2.LINE_4)
                 
                 
             # write frame that you processed to output
@@ -373,7 +391,7 @@ def main(input_video_file: str, output_video_file: str) -> None:
     # Closes all the frames
     cv2.destroyAllWindows()
 
-main("input5.mp4", "output.mp4")
+main("videos/input.mp4", "output.mp4")
 
 # if __name__ == '__main__':
 #     parser = argparse.ArgumentParser(description='OpenCV video processing')
