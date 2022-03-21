@@ -58,8 +58,8 @@ def OpenVideoAndWriteOutput(input_video_file,output_video_file):
     #the argument isColor = False specify that the output is in Gray scale and not RGB
     
     #if you do not want to have the output dimensions as the same as input dimensions, comment the 2 lines below
-    # output_frame_width = input_frame_width
-    # output_frame_height = input_frame_height
+    output_frame_width = input_frame_width
+    output_frame_height = input_frame_height
     
     out = cv2.VideoWriter(output_video_file, fourcc, input_fps, (output_frame_width, output_frame_height))
     print("fps is", input_fps)
@@ -190,10 +190,11 @@ def houghTransformCircles(input,param1,param2,minRadius,maxRadius):
     # conversion of BGR to GRAY
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     #smooth to reduce noise
-    smoothed = gaussianBlur(gray)
+    smoothed = gaussianBlur(gray,kernel = 5)
+    smoothed = bilateralFiltering(smoothed,kernel=5)
     rows = smoothed.shape[0]
-    #param 1 : sensitivity (strenght of edges)
-    #param 2 :how many edge needed to define a circcle
+    #param 1 : sensitivity (strenght of edges). 
+    #param 2 :how many edge needed to define a circcle. Smaller it is, the more circle will be detected
     circles = cv2.HoughCircles(smoothed, cv2.HOUGH_GRADIENT, 1, rows / 8,
                                param1=param1, param2=param2,
                                minRadius=minRadius, maxRadius=maxRadius)
@@ -305,7 +306,7 @@ def templateMatch(input,temp="template/gohan.png"):
     return frame
 
 
-def likelihoodOfMatch(input, temp='template/gohan.png'):
+def likelihoodOfMatch(input,cap, temp='template/gohan.png'):
     frame = input
     frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     template = cv2.imread(temp,0)
@@ -325,58 +326,12 @@ def likelihoodOfMatch(input, temp='template/gohan.png'):
     inv_probability = cv2.normalize(temp, dst=None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
     probability = cv2.bitwise_not(inv_probability) 
     heatmap_image = cv2.applyColorMap(probability, cv2.COLORMAP_JET)
+    heatmap_image = cv2.resize(heatmap_image, (int(cap.get(3)), int(cap.get(4))), fx = 0, fy = 0,
+                       interpolation = cv2.INTER_CUBIC)
     frame = heatmap_image
-    #frame = cv2.cvtColor(probability, cv2.COLOR_GRAY2HSV)
     return frame
 
-def makeDisappear(input,lower_threshold = np.array([5, 75, 25]),upper_threshold = np.array([25, 255, 255])):
-    frame = input
-    count = 0
-    background = 0
-    count +=1
-    frame = np.flip(frame,axis=1)
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    mask1 = cv2.inRange(hsv,lower_threshold,upper_threshold)
-    mask2 = cv2.inRange(hsv,np.array([175, 75, 25]),np.array([195, 75, 25]))
-    mask1 = cv2.morphologyEx(mask1, cv2.MORPH_OPEN, np.ones((3,3),np.uint8))
-    mask1 = cv2.morphologyEx(mask1, cv2.MORPH_DILATE, np.ones((3,3),np.uint8))
-    mask2 = cv2.bitwise_not(mask1)
-    
-    res1 = cv2.bitwise_and(frame,frame,mask=mask2)
-    res2 = cv2.bitwise_and(background, background, mask = mask1)
-    finalOutput = cv2.addWeighted(res1,1,res2,1,0)
-    
-    frame = finalOutput
-# def MatchingValues(input, temp='template/gohan.png'):
-#     frame = input
-#     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-#     #read template from (png file)
-#     template = cv2.imread(temp,0)
-    
-#     #resize the template (conserve the widht height ratio)
-#     resizing_factor = 0.20    #resizing factor
-#     width = int(template.shape[::-1][0] * resizing_factor)
-#     height = int(template.shape[::-1][1] * resizing_factor)
-#     dim = (width, height)
-#     template = cv2.resize(template, dim, interpolation = cv2.INTER_AREA)
-    
-#     #width and height of the resized template :
-#     w,h = template.shape[::-1]
-    
-#     #perform matching with SQDIFF_NORMED method
-#     res = cv2.matchTemplate(gray,template,cv2.TM_SQDIFF_NORMED)
-#     res = cv2.cvtColor(res, cv2.COLOR_GRAY2BGR)
-    
-#     alpha=0.4
-#     background = cv2.flip(gray,1) 
-#     overlay = res
-#     added_image = cv2.addWeighted(background,0.4,overlay,0.1,0)
-#     # Change the region with the result
-#     background[150:250,150:250] = added_image
-    
-#     frame = background
-    
-#     return frame
+
 
 
 """
@@ -401,94 +356,111 @@ def main(input_video_file: str, output_video_file: str) -> None:
             if cv2.waitKey(28) & 0xFF == ord('q'):
                 break
 
-                
-            # if between(cap, 0, 4000):
-            #     for i in range(8):
-            #         if between(cap,i*500, (i+1)*500):
-            #             if i%2 ==0:
-            #                 frame = toGray(frame)
-            #                 cv2.putText(frame, 'Gray Scale', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            #             else:
-            #                 frame = noChange(frame)
-            #                 cv2.putText(frame, 'RGB scale', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            # if between(cap,4000,6000):
-            #     frame = gaussianBlur(frame)
-            #     cv2.putText(frame, 'Gaussian, kernel = (5,5)', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            # if between(cap,6000,8000):
-            #     frame = gaussianBlur(frame,kernel=13)
-            #     cv2.putText(frame, 'Gaussian, kernel = (13,13)', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            #     cv2.putText(frame, 'image is more smoothed', (50,70),font, 1, color, thickness, cv2.LINE_4)
-            # if between(cap,8000,11000):
-            #     frame = bilateralFiltering(frame)
-            #     cv2.putText(frame, 'bilateral filtering, sigma=10', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            #     cv2.putText(frame, 'edges are preserved, thanks to', (50,70),font, 1, color, thickness, cv2.LINE_4)
-            #     cv2.putText(frame, 'the filter as a function of', (50,90),font, 1, color, thickness, cv2.LINE_4)
-            #     cv2.putText(frame, 'pixel difference', (50,110),font, 1, color, thickness, cv2.LINE_4)
-            # if between(cap,11000,13000):
-            #     frame = bilateralFiltering(frame,9,1000000)
-            #     cv2.putText(frame, 'bilateral filtering,sigma=1000000', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            #     cv2.putText(frame, 'becomes similar to Gaussian', (50,70),font, 1, color, thickness, cv2.LINE_4)
-            # if between(cap, 13000, 15000):
-            #     frame = noChange(frame)
-            # if between(cap,15000,18000):
-            #     frame = thresholdingColorHSV(frame)
-            #     cv2.putText(frame, 'blue thresholding in HSV space', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            # if between(cap,18000,21000):
-            #     frame = thresholdingColorHSV_Dilation(frame)
-            #     cv2.putText(frame, 'blue thresholding in HSV', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            #     cv2.putText(frame, 'with dilation', (50,70),font, 1, color, thickness, cv2.LINE_4)
-            # if between(cap, 21000, 23000):
-            #     frame = noChange(frame)
-            # if between(cap,23000,25000):
-            #     frame = sobelDetector(frame, ksize =15, axis='x')
-            #     cv2.putText(frame, 'Sobel - Vertical edges', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            # if between(cap,25000,27000):
-            #     frame = sobelDetector(frame, ksize =15, axis='y')
-            #     cv2.putText(frame, 'Sobel - Horizontal edges', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            # if between(cap,27000,29000):
-            #     frame = sobelDetector(frame, ksize =3, axis='x')
-            #     cv2.putText(frame, 'Sobel - Horizontal edges', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            #     cv2.putText(frame, 'Smaller Kernel', (50,70),font, 1, color, thickness, cv2.LINE_4)
-            # if between(cap, 29000, 31000):
-            #     frame = noChange(frame)
-            # if between(cap,31000,36000):
-            #     #houghTransformCircles(input,param1,param2,minRadius,maxRadius)
-            #     houghTransformCircles(frame,180,30,1,0)
-            #     cv2.putText(frame, 'Hough Transform, param1=180', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            #     cv2.putText(frame, 'param2 = 30', (50,70),font, 1, color, thickness, cv2.LINE_4)
-            #     cv2.putText(frame, 'minRadius = 1, maxRadius = 0', (50,90),font, 1, color, thickness, cv2.LINE_4)
-            # if between(cap,36000,40000):
-            #     #houghTransformCircles(input,param1,param2,minRadius,maxRadius)
-            #     houghTransformCircles(frame,180,20,1,0)
-            #     cv2.putText(frame, 'Hough Transform, param1=180', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            #     cv2.putText(frame, 'param2 = 20', (50,70),font, 1, color, thickness, cv2.LINE_4)
-            #     cv2.putText(frame, 'minRadius = 1, maxRadius = 0', (50,90),font, 1, color, thickness, cv2.LINE_4)  
-            # if between(cap,40000,42000):
-            #     #houghTransformCircles(input,param1,param2,minRadius,maxRadius)
-            #     houghTransformCircles(frame,100,15,1,10)
-            #     cv2.putText(frame, 'Hough Transform, param1=100', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            #     cv2.putText(frame, 'param2 = 10', (50,70),font, 1, color, thickness, cv2.LINE_4)
-            #     cv2.putText(frame, 'minRadius = 1, maxRadius = 15', (50,90),font, 1, color, thickness, cv2.LINE_4)
-            # if between(cap,42000,47000):
-            #     templateMatch(frame)
-            #     cv2.putText(frame, 'Match template', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            # if between(cap,47000,60000):
-            #     trackObjectByColor(frame)
-            #     cv2.putText(frame, 'Track orange Object', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-                
-            # #to make disappears and appears dots on paper : 
-            #     if between(cap, 0, 500):
-            #         frame = cv2.medianBlur(frame,55)
-            #     if between(cap, 500, 1000):
-            #         frame = cv2.medianBlur(frame,55)
-            #     if between(cap, 1000, 1500):
-            #         frame = cv2.medianBlur(frame,55)
-            #     if between(cap, 1500, 10000):
-            #         frame = cv2.medianBlur(frame,55)
-            #     if between(cap, 0, 10000):
-            #         frame = cv2.medianBlur(frame,55)
-            #     if between(cap, 0, 10000):
-            #         frame = cv2.medianBlur(frame,55)
+            if between(cap, 0, 4000):
+                for i in range(8):
+                    if between(cap,i*500, (i+1)*500):
+                        if i%2 ==0:
+                            frame = toGray(frame)
+                            cv2.putText(frame, 'Gray Scale', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                        else:
+                            frame = noChange(frame)
+                            cv2.putText(frame, 'RGB scale', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,4000,6000):
+                frame = gaussianBlur(frame)
+                cv2.putText(frame, 'Gaussian, kernel = (5,5)', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,6000,8000):
+                frame = gaussianBlur(frame,kernel=13)
+                cv2.putText(frame, 'Gaussian, kernel = (13,13)', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'image is more smoothed', (50,70),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,8000,11000):
+                frame = bilateralFiltering(frame)
+                cv2.putText(frame, 'bilateral filtering, sigma=10', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'edges are preserved, thanks to', (50,70),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'the filter as a function of', (50,90),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'pixel difference', (50,110),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,11000,13000):
+                frame = bilateralFiltering(frame,9,1000000)
+                cv2.putText(frame, 'bilateral filtering,sigma=1000000', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'becomes similar to Gaussian', (50,70),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap, 13000, 13500):
+                frame = noChange(frame)
+            if between(cap,13500,17000):
+                frame = thresholdingColorHSV(frame)
+                cv2.putText(frame, 'blue thresholding in HSV space', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,17000,21200):
+                frame = thresholdingColorHSV_Dilation(frame)
+                cv2.putText(frame, 'blue thresholding in HSV', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'with dilation', (50,70),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap, 21200, 22000):
+                frame = noChange(frame)
+            if between(cap,22000,24000):
+                frame = sobelDetector(frame, ksize =15, axis='x')
+                cv2.putText(frame, 'Sobel - Vertical edges', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,24000,25000):
+                frame = sobelDetector(frame, ksize =3, axis='x')
+                cv2.putText(frame, 'Sobel - Vertical edges - Smaller kernel', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,25000,26000):
+                frame = sobelDetector(frame, ksize =15, axis='y')
+                cv2.putText(frame, 'Sobel - Horizontal edges', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap, 26000, 27000):
+                frame = noChange(frame)
+            if between(cap,27000,29000):
+                #houghTransformCircles(input,param1,param2,minRadius,maxRadius)
+                houghTransformCircles(frame,180,25,1,0)
+                cv2.putText(frame, 'Hough Transform, param1=180', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'param2 = 25', (50,70),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'minRadius = 1, maxRadius = 0', (50,90),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'we have a lot of false circles', (50,110),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,29000,30000):
+                #houghTransformCircles(input,param1,param2,minRadius,maxRadius)
+                houghTransformCircles(frame,180,30,1,0)
+                cv2.putText(frame, 'param 2 increased to 30', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'less false circles', (50,70),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,30000,32000):
+                #houghTransformCircles(input,param1,param2,minRadius,maxRadius)
+                houghTransformCircles(frame,200,30,1,0)
+                cv2.putText(frame, 'param 1 increased to 200', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'even less false circles', (50,70),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,32000,34000):
+                #houghTransformCircles(input,param1,param2,minRadius,maxRadius)
+                houghTransformCircles(frame,160,25,30,0)
+                cv2.putText(frame, 'param 1 decreased to 180', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'even less false circles', (50,70),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'minimum radius = 30', (50,90),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,34000,36000):
+                #houghTransformCircles(input,param1,param2,minRadius,maxRadius)
+                houghTransformCircles(frame,100,15,1,10)
+                cv2.putText(frame, 'Hough Transform, param1=100', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'param2 = 10', (50,70),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'minRadius = 1, maxRadius = 15', (50,90),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'by putting a max limit on the radius', (50,110),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'we detect only small circles', (50,130),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,37000,40000):
+                templateMatch(frame)
+                cv2.putText(frame, 'Match template', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,40000,42000):
+                frame = likelihoodOfMatch(frame,cap)
+                cv2.putText(frame, 'Match template likelihood', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,42000,45000):
+                trackObjectByColor(frame)
+                cv2.putText(frame, 'Track orange Object', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+            if between(cap,45000,47000):
+                trackAndChangeObjectByColor(frame)
+                cv2.putText(frame, 'Track orange Object and change its color', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+            
+            # #to make disappears and appears dots on paper, just use median filter !! : 
+            #     # if between(cap, 0, 500):
+            #     #     frame = cv2.medianBlur(frame,55)
+            #     # if between(cap, 500, 1000):
+            #     #     frame = cv2.medianBlur(frame,55)
+            #     # if between(cap, 1000, 1500):
+            #     #     frame = cv2.medianBlur(frame,55)
+            #     # if between(cap, 1500, 10000):
+            #     #     frame = cv2.medianBlur(frame,55)
+            #     # if between(cap, 0, 10000):
+            #     #     frame = cv2.medianBlur(frame,55)
+            #     # if between(cap, 0, 10000):
+            #     #     frame = cv2.medianBlur(frame,55)
             
             
             # write frame that you processed to output
@@ -511,14 +483,56 @@ def main(input_video_file: str, output_video_file: str) -> None:
     # Closes all the frames
     cv2.destroyAllWindows()
 
-main("videos/orange.mp4", "output.mp4")
+"""
+function to make disappear an object when we put a red object on top of it
+we need to wait 3sec to get the background
+so, the function is separated by the main.py function to not have to wait each time 
+"""
+"""inspired by https://medium.com/bloggers-bay/abracadabra-to-make-objects-disappear-using-opencv-in-python-270c150ad32e"""
+def makeDisappear(input_video_file: str, output_video_file: str) -> None:
+    cap,out = OpenVideoAndWriteOutput(input_video_file,output_video_file)
+    time.sleep(3)
+    count = 0
+    background = 0
+    for i in range(20):
+        ret,background = cap.read()
+    background = np.flip(background,axis=1)
+    while cap.isOpened():
+        ret, img = cap.read()
+        if not ret:
+            break
+        count+=1
+        img = np.flip(img,axis=1)
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        lower_red = np.array([0,180,70])
+        upper_red = np.array([10,255,255])
+        mask1 = cv2.inRange(hsv,lower_red,upper_red)
+        lower_red = np.array([170,120,70])
+        upper_red = np.array([180,255,255])
+        mask2 = cv2.inRange(hsv,lower_red,upper_red)
+        mask1 = mask1+mask2
+        mask1 = cv2.morphologyEx(mask1, cv2.MORPH_OPEN, np.ones((9,9),np.uint8))
+        mask1 = cv2.morphologyEx(mask1, cv2.MORPH_DILATE, np.ones((9,9),np.uint8))
+        mask2 = cv2.bitwise_not(mask1)
+        res1 = cv2.bitwise_and(img,img,mask=mask2)
+        res2 = cv2.bitwise_and(background, background, mask = mask1)
+        finalOutput = cv2.addWeighted(res1,1,res2,1,0)     
+        out.write(finalOutput)
+        cv2.imshow("magic",finalOutput)
+        cv2.waitKey(1)
+    cap.release()
+    out.release()
+    cv2.destroyAllWindows()
+    
+    
+disappear = 0 
 
-# if __name__ == '__main__':
-#     parser = argparse.ArgumentParser(description='OpenCV video processing')
-#     parser.add_argument('-i', "--input", help='full path to input video that will be processed')
-#     parser.add_argument('-o', "--output", help='full path for saving processed video output')
-#     args = parser.parse_args()
+if disappear == 0: 
+    
+    main("videos/input_full.mp4", "videos/output.mp4")
+elif disappear == 1:
+    makeDisappear("videos/avocado2.mp4", "make_disappear2.mp4")
+    
+    
 
-#     if args.input is None or args.output is None:
-#         sys.exit("Please provide path to input and output video files! See --help")
-
+    
