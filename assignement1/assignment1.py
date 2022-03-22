@@ -22,14 +22,20 @@ some definitions of variables :
 """
 #we define the below frame width and height of the frame frame
 #they are smaller than the input_frame_width and height 
+
+
 #the idea is to downsample to keep the file size small
-output_frame_width = 540
-output_frame_height = 380
+# output_frame_width = 540
+# output_frame_height = 380
+# font_size = (output_frame_width * output_frame_height) / (5000 * 25000)
+
+
 # font,colour, ... to be used for video text annotation
 font = cv2.FONT_HERSHEY_COMPLEX_SMALL
-font_size = (output_frame_width * output_frame_height) / (1000 * 1000)
-color = (0, 255, 255)
-thickness = 1
+fontScale = 2
+
+color = (255, 0, 255)
+thickness = 2
 
 """
 functions to use later
@@ -361,93 +367,113 @@ def main(input_video_file: str, output_video_file: str) -> None:
                     if between(cap,i*500, (i+1)*500):
                         if i%2 ==0:
                             frame = toGray(frame)
-                            cv2.putText(frame, 'Gray Scale', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                            cv2.putText(frame, 'Gray Scale', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
                         else:
                             frame = noChange(frame)
-                            cv2.putText(frame, 'RGB scale', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                            cv2.putText(frame, 'RGB scale', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
             if between(cap,4000,6000):
                 frame = gaussianBlur(frame)
-                cv2.putText(frame, 'Gaussian, kernel = (5,5)', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'Gaussian, kernel = (5,5)', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
             if between(cap,6000,8000):
                 frame = gaussianBlur(frame,kernel=13)
-                cv2.putText(frame, 'Gaussian, kernel = (13,13)', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(frame, 'image is more smoothed', (50,70),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'Gaussian, kernel = (13,13)', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'image is more smoothed', (50,90),font, fontScale, color, thickness, cv2.LINE_4)
             if between(cap,8000,11000):
                 frame = bilateralFiltering(frame)
-                cv2.putText(frame, 'bilateral filtering, sigma=10', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(frame, 'edges are preserved, thanks to', (50,70),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(frame, 'the filter as a function of', (50,90),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(frame, 'pixel difference', (50,110),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'bilateral filtering, sigma=10', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'edges are preserved, thanks to', (50,90),font, fontScale, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'the filter as a function of', (50,130),font, fontScale, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'pixel difference', (50,170),font, fontScale, color, thickness, cv2.LINE_4)
             if between(cap,11000,13000):
                 frame = bilateralFiltering(frame,9,1000000)
-                cv2.putText(frame, 'bilateral filtering,sigma=1000000', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(frame, 'becomes similar to Gaussian', (50,70),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'bilateral filtering,sigma=1000000', (50, 50),font,fontScale, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'becomes similar to Gaussian', (50,90),font, fontScale, color, thickness, cv2.LINE_4)
             if between(cap, 13000, 13500):
                 frame = noChange(frame)
             if between(cap,13500,17000):
                 frame = thresholdingColorHSV(frame)
-                cv2.putText(frame, 'blue thresholding in HSV space', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'blue thresholding in HSV space', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
             if between(cap,17000,21200):
                 frame = thresholdingColorHSV_Dilation(frame)
-                cv2.putText(frame, 'blue thresholding in HSV', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(frame, 'with dilation', (50,70),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'blue thresholding in HSV', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'with dilation', (50,90),font, fontScale, color, thickness, cv2.LINE_4)
             if between(cap, 21200, 22000):
                 frame = noChange(frame)
             if between(cap,22000,24000):
                 frame = sobelDetector(frame, ksize =15, axis='x')
-                cv2.putText(frame, 'Sobel - Vertical edges', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'Sobel - Vertical edges', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
             if between(cap,24000,25000):
                 frame = sobelDetector(frame, ksize =3, axis='x')
-                cv2.putText(frame, 'Sobel - Vertical edges - Smaller kernel', (50, 50),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'Sobel - Vertical edges - Smaller kernel', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
             if between(cap,25000,26000):
                 frame = sobelDetector(frame, ksize =15, axis='y')
-                cv2.putText(frame, 'Sobel - Horizontal edges', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            if between(cap, 26000, 27000):
+                cv2.putText(frame, 'Sobel - Horizontal edges', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
+            if between(cap, 26500, 27000):
                 frame = noChange(frame)
             if between(cap,27000,29000):
                 #houghTransformCircles(input,param1,param2,minRadius,maxRadius)
                 houghTransformCircles(frame,180,25,1,0)
-                cv2.putText(frame, 'Hough Transform, param1=180', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(frame, 'param2 = 25', (50,70),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(frame, 'minRadius = 1, maxRadius = 0', (50,90),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(frame, 'we have a lot of false circles', (50,110),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'Hough Transform, param1=180', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'param2 = 25', (50,90),font, fontScale, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'minRadius = 1, maxRadius = 0', (50,130),font, fontScale, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'we have a lot of false circles', (50,170),font, fontScale, color, thickness, cv2.LINE_4)
             if between(cap,29000,30000):
                 #houghTransformCircles(input,param1,param2,minRadius,maxRadius)
                 houghTransformCircles(frame,180,30,1,0)
-                cv2.putText(frame, 'param 2 increased to 30', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(frame, 'less false circles', (50,70),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'param 2 increased to 30', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'less false circles', (50,90),font, fontScale, color, thickness, cv2.LINE_4)
             if between(cap,30000,32000):
                 #houghTransformCircles(input,param1,param2,minRadius,maxRadius)
                 houghTransformCircles(frame,200,30,1,0)
-                cv2.putText(frame, 'param 1 increased to 200', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(frame, 'even less false circles', (50,70),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'param 1 increased to 200', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'even less false circles', (50,90),font, fontScale, color, thickness, cv2.LINE_4)
             if between(cap,32000,34000):
                 #houghTransformCircles(input,param1,param2,minRadius,maxRadius)
                 houghTransformCircles(frame,160,25,30,0)
-                cv2.putText(frame, 'param 1 decreased to 180', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(frame, 'even less false circles', (50,70),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(frame, 'minimum radius = 30', (50,90),font, 1, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'param 1 decreased to 180', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'even less false circles', (50,90),font, fontScale, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'minimum radius = 30', (50,130),font, fontScale, color, thickness, cv2.LINE_4)
             if between(cap,34000,36000):
                 #houghTransformCircles(input,param1,param2,minRadius,maxRadius)
                 houghTransformCircles(frame,100,15,1,10)
-                cv2.putText(frame, 'Hough Transform, param1=100', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(frame, 'param2 = 10', (50,70),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(frame, 'minRadius = 1, maxRadius = 15', (50,90),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(frame, 'by putting a max limit on the radius', (50,110),font, 1, color, thickness, cv2.LINE_4)
-                cv2.putText(frame, 'we detect only small circles', (50,130),font, 1, color, thickness, cv2.LINE_4)
-            if between(cap,37000,40000):
+                cv2.putText(frame, 'Hough Transform, param1=100', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'param2 = 10', (50,90),font,fontScale, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'minRadius = 1, maxRadius = 15', (50,130),font,fontScale, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'by putting a max limit on the radius', (50,170),font, fontScale, color, thickness, cv2.LINE_4)
+                cv2.putText(frame, 'we detect only small circles', (50,210),font, fontScale, color, thickness, cv2.LINE_4)
+            if between(cap,37000,39000):
                 templateMatch(frame)
-                cv2.putText(frame, 'Match template', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            if between(cap,40000,42000):
+                cv2.putText(frame, 'Match template', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
+            if between(cap,39000,41500):
                 frame = likelihoodOfMatch(frame,cap)
-                cv2.putText(frame, 'Match template likelihood', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            if between(cap,42000,45000):
+                cv2.putText(frame, 'Match template likelihood', (50, 50),font,fontScale, color, thickness, cv2.LINE_4)
+            if between(cap,43000,45000):
                 trackObjectByColor(frame)
-                cv2.putText(frame, 'Track orange Object', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            if between(cap,45000,47000):
+                cv2.putText(frame, 'Track orange Object', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
+            if between(cap,45000,48000):
                 trackAndChangeObjectByColor(frame)
-                cv2.putText(frame, 'Track orange Object and change its color', (50, 50),font, 1, color, thickness, cv2.LINE_4)
-            
+                cv2.putText(frame, 'Track orange Object and change its color', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
+            if between(cap,48000,50000):
+                for i in range(4):
+                    if between(cap,49000 + i*500, 49000+(i+1)*500):
+                        if i%2 ==0:
+                            frame = cv2.medianBlur(frame,55)
+                            cv2.putText(frame, 'Median Blur', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
+                        else:
+                            frame = noChange(frame)
+            if between(cap,51000,65000):
+                frame = noChange(frame)
+            if between(cap,51000,54000):
+                cv2.putText(frame, 'First, ', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
+                
+                
+                
+                
+                
+                
+                
+                
+                
             # #to make disappears and appears dots on paper, just use median filter !! : 
             #     # if between(cap, 0, 500):
             #     #     frame = cv2.medianBlur(frame,55)
@@ -529,7 +555,7 @@ disappear = 0
 
 if disappear == 0: 
     
-    main("videos/input_full.mp4", "videos/output.mp4")
+    main("videos/input.mp4", "videos/output.mp4")
 elif disappear == 1:
     makeDisappear("videos/avocado2.mp4", "make_disappear2.mp4")
     
