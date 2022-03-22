@@ -360,8 +360,7 @@ def main(input_video_file: str, output_video_file: str) -> None:
 
             # define q as the exit button
             if cv2.waitKey(28) & 0xFF == ord('q'):
-                break
-
+                break  
             if between(cap, 0, 4000):
                 for i in range(8):
                     if between(cap,i*500, (i+1)*500):
@@ -463,32 +462,7 @@ def main(input_video_file: str, output_video_file: str) -> None:
                             frame = noChange(frame)
             if between(cap,51000,65000):
                 frame = noChange(frame)
-            if between(cap,51000,54000):
-                cv2.putText(frame, 'First, ', (50, 50),font, fontScale, color, thickness, cv2.LINE_4)
-                
-                
-                
-                
-                
-                
-                
-                
-                
-            # #to make disappears and appears dots on paper, just use median filter !! : 
-            #     # if between(cap, 0, 500):
-            #     #     frame = cv2.medianBlur(frame,55)
-            #     # if between(cap, 500, 1000):
-            #     #     frame = cv2.medianBlur(frame,55)
-            #     # if between(cap, 1000, 1500):
-            #     #     frame = cv2.medianBlur(frame,55)
-            #     # if between(cap, 1500, 10000):
-            #     #     frame = cv2.medianBlur(frame,55)
-            #     # if between(cap, 0, 10000):
-            #     #     frame = cv2.medianBlur(frame,55)
-            #     # if between(cap, 0, 10000):
-            #     #     frame = cv2.medianBlur(frame,55)
-            
-            
+              
             # write frame that you processed to output
             out.write(frame)
 
@@ -551,14 +525,27 @@ def makeDisappear(input_video_file: str, output_video_file: str) -> None:
     cv2.destroyAllWindows()
     
     
-disappear = 0 
 
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='OpenCV video processing')
+    parser.add_argument('-i', "--input", help='full path to input video that will be processed')
+    parser.add_argument('-o', "--output", help='full path for saving processed video output')
+    args = parser.parse_args()
+
+    if args.input is None or args.output is None:
+        sys.exit("Please provide path to input and output video files! See --help")
+
+    main(args.input, args.output)
+
+disappear = 0 
 if disappear == 0: 
-    
-    main("videos/input.mp4", "videos/output.mp4")
+    main(args.input, args.output)
+   # python assignment1.py -i "videos/old_videos/input_full.mp4" -o "videos/output.mp4"
 elif disappear == 1:
     makeDisappear("videos/avocado2.mp4", "make_disappear2.mp4")
     
     
+
+
 
     
